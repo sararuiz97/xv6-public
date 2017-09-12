@@ -188,11 +188,12 @@ struct {
 
 #define C(x)  ((x)-'@')  // Control-x
 extern void printHello(void);
+extern void mataProceso(void);
 
 void
 consoleintr(int (*getc)(void))
 {
-  int c, doprocdump = 0, doPrintHello = 0;
+  int c, doprocdump = 0, doPrintHello = 0, doMataProc = 0;
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
@@ -202,7 +203,7 @@ consoleintr(int (*getc)(void))
       doprocdump = 1;
       break;
     case C('C'):
-      doPrintHello = 1; 
+      doMataProc = 1; 
       break;
     case C('U'):  // Kill line.
       while(input.e != input.w &&
@@ -236,6 +237,10 @@ consoleintr(int (*getc)(void))
   }
    if(doPrintHello) {
     printHello();
+  }
+
+  if(doMataProc){
+    mataProceso();
   }
 }
 
