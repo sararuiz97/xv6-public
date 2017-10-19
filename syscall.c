@@ -60,7 +60,7 @@ argptr(int n, char **pp, int size)
 {
   int i;
   struct proc *curproc = myproc();
- 
+
   if(argint(n, &i) < 0)
     return -1;
   if(size < 0 || (uint)i >= curproc->sz || (uint)i+size > curproc->sz)
@@ -109,6 +109,9 @@ extern int sys_set_priority(void);
 extern int sys_shmem(void);
 extern int sys_shmat(void);
 extern int sys_shdemat(void);
+extern int sys_getppid(void);
+extern int sys_signal(void);
+extern int sys_killsignal(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -132,12 +135,15 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_shutdown] sys_shutdown,
-[SYS_reboot] sys_reboot,
-[SYS_set_priority] sys_set_priority,
+[SYS_shutdown]   sys_shutdown,
+[SYS_reboot]   sys_reboot,
+[SYS_set_priority]   sys_set_priority,
 [SYS_shmem] sys_shmem,
 [SYS_shmat] sys_shmat,
 [SYS_shdemat] sys_shdemat,
+[SYS_getppid] sys_getppid,
+[SYS_signal] sys_signal,
+[SYS_killsignal] sys_killsignal
 };
 
 void

@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "types.h"
 
 int
 sys_fork(void)
@@ -90,6 +91,15 @@ sys_uptime(void)
   return xticks;
 }
 
+int sys_set_priority(void){
+  int priority;
+  if(argint(0, &priority) < 0)
+    return -1;
+  myproc()->priority = priority;
+  return 0;
+}
+
+
 int sys_shutdown(void){
   outw(0xB004, 0x0 | 0x2000);
   return 0;
@@ -100,10 +110,27 @@ int sys_reboot(void){
   return 0;
 }
 
-int sys_set_priority(void){
-  int priority;
-  if (argint(0, &priority) < 0)
+int sys_signal(void){
+  int signum;
+  int function;
+  if(argint(0, &signum) < 0){
     return -1;
-  myproc()->priority = priority;
-  return 0; 
-}
+  }
+  if(argint(1, &function) < 0){
+    return -1;
+  }
+ 
+   if (signum > 0 && signum <= 4)
+   {
+     int value = (int)myproc()->signals[signum-1];
+     myproc()->signals[signum-1] = (sighandler_t)function;
+     return value;
+   }
+   else{
+    return -1;
+  };
+ }
+ 
+ int sys_getppid(void){
+ return myproc()->parent->pid;
+  } 

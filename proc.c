@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "stdio.h"
 
 struct {
   struct spinlock lock;
@@ -38,10 +39,10 @@ struct cpu*
 mycpu(void)
 {
   int apicid, i;
-  
+
   if(readeflags()&FL_IF)
     panic("mycpu called with interrupts enabled\n");
-  
+
   apicid = lapicid();
   // APIC IDs are not guaranteed to be contiguous. Maybe we should have
   // a reverse map, or reserve a register to store &cpus[i].
@@ -124,7 +125,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -142,6 +143,12 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
   p->priority = 125;
+  int i = 0;
+  while(i<4){
+    p->signals[i] = NULL;
+    i += 1;
+  }
+
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -276,7 +283,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -323,12 +330,12 @@ wait(void)
 void
 scheduler(void)
 {
+  struct proc *p;
   struct proc *hp;
   struct proc *sp;
-  struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -341,38 +348,40 @@ scheduler(void)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-      if(hp->state != RUNNABLE){
-        hp = p;
-      }else {
-        if(hp->priority < p->priority) {
+
+        if(hp->state != RUNNABLE){
           hp = p;
         }
-      }
-      
-      if(sp->state != RUNNABLE){
-        sp = p;
-      }
-    }
-    if(hp->priority > sp->priority){
-      p = hp;
-    } else {
-      p = sp;
-    }
-  
-    // Switch to chosen process.  It is the process's job
-    // to release ptable.lock and then reacquire it
-    // before jumping back to us.
-    c->proc = p;
-    switchuvm(p);
-    p->state = RUNNING;
+        else{
+          if(hp->priority < p->priority){
+            hp = p;
+          }
+        }
 
-    swtch(&(c->scheduler), p->context);
-    switchkvm();
+        if(sp->state != RUNNABLE){
+          sp = p;
+        }
+    }
+        if(hp->priority > sp->priority){
+          p = hp;
+        }
+        else{
+          p = sp;
+        }
 
-    // Process is done running for now.  
-    // It should have changed its p->state before coming back.
-    c->proc = 0;
-    
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
     release(&ptable.lock);
 
   }
@@ -441,7 +450,7 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+
   if(p == 0)
     panic("sleep");
 
@@ -556,13 +565,28 @@ procdump(void)
   }
 }
 
-void printHello(void){
-  cprintf("Hola desde la consola");
-}
-
-void mataProceso(void){
+void endProcess(void){
   if(myproc() != 0){
-    cprintf("\n %s hemos matado el proceso\n", myproc()->name);
+    cprintf("\n %s el proceso ha terminado \n", myproc()->name);
     kill(myproc()->pid);
   }
+}
+
+int sys_killsignal(void){
+  int pid;
+  int signum;
+  struct proc *p;
+
+  if(argint(0, &pid) < 0) return -1;
+  if(argint(1, &signum) < 0) return -1;
+  if(signum > 4 || signum < 1) return -1;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->pid == pid) break;   
+    if(p->pid != pid) return -1;
+
+    signum -= 1; 
+    if ( (int)p->signals[signum] == -1 ) kill(p->pid);
+    p->tf->esp -= 4;
+    p->tf->eip = (uint)p->signals[signum];
+    return 1;
 }

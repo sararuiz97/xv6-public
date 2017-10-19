@@ -20,9 +20,12 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
-#define SYS_shutdown 22
+#define SYS_shutdown  22
 #define SYS_reboot 23
-#define SYS_set_priority 24
+#define SYS_set_priority   24
 #define SYS_shmem 25
 #define SYS_shmat 26
 #define SYS_shdemat 27
+#define SYS_getppid 28
+#define SYS_signal 29
+#define SYS_killsignal 30
