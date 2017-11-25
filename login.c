@@ -87,6 +87,7 @@ int main(int argc, char *argv[]){
 				break;
 			}
   		}
+  		printf(1, "Login failed, try again\n");
   		close(fd);
 	}
 	exit();
